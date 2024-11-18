@@ -1,8 +1,0 @@
-attendance system (using cv2, datetime, tabulate, csv and simple facerec)
-installing liabraries:
-python3 --version
-pip3 --version
-
-pip3 install opencv-python datetime tabulate csv
-
-pip3 install opencv-contrib-python
