@@ -3,69 +3,66 @@ import datetime
 from tabulate import tabulate
 from simple_facerec import SimpleFacerec
 import csv
+import time
+import mediapipe as mp
 
+mpDraw = mp.solutions.drawing_utils
+mpFaceMesh = mp.solutions.face_mesh
+faceMesh = mpFaceMesh.FaceMesh(False, 2)
+drawSpec = mpDraw.DrawingSpec(thickness=1,circle_radius=1)
+
+pTime = 0
 
 
 sfr = SimpleFacerec()
-#load images from a folder and the app use these photos to compare with the face in the camera
 sfr.load_encoding_images("imgs") 
 
-#alist to save students names
 students = []
 
-#open the camera
-video = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('videos/2.mp4')
 
-#compare camera frames with photos in the folder
+
 while True:
-   #read the frames
-   ret, frame = video.read()
-   if not ret:
-       print("Error... try again")
+    success, img = cap.read()
+    if not success:
+       print("Error.. try again")
        break
   
-   #compare faces and give you the name of the face in the frame
-   face_locations, face_names = sfr.detect_known_faces(frame)
+    face_locations, face_names = sfr.detect_known_faces(img)
+    imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-
-   #put a square around the face and put the name of the face
-   for (top, right, bottom, left), name in zip(face_locations, face_names):
-       cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-       cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-       #time of arrival
-       current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-       #save student name and the time for arrival in a list
-       if name == "Unknown":
+    results = faceMesh.process(imgRGB)
+    
+    
+    cTime = time.time()
+    fps = 1/(cTime-pTime)
+    pTime = cTime
+    cv2.putText(img, str(int(fps)),(10,70),cv2.FONT_HERSHEY_PLAIN,3,(0,255,0),3)
+    
+    for (top, right, bottom, left), name in zip(face_locations, face_names):
+        cv2.putText(img, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+        current_time = datetime.datetime.now().strftime("%H:%M:%S")
+        if name == "Unknown":
            break
-       if name not in [student[0] for student in students]:
+        if name not in [student[0] for student in students]:
            students.append((name, current_time))
-  
-   #show the frame
-   cv2.imshow("attendance system", frame)
-  
-   #end app
-   key = cv2.waitKey(1)
-   if key == 32:
+        
+    if results.multi_face_landmarks:
+            for faceLms in results.multi_face_landmarks:
+                mpDraw.draw_landmarks(img, faceLms, mpFaceMesh.FACEMESH_TESSELATION, drawSpec, drawSpec)
+
+    cv2.imshow("attendance system", img)
+
+    key = cv2.waitKey(1)
+    if key == 27:
        break
-   if key == 27:
-       break
 
-
-
-
-#students data in a table to print the data later
 table_data = [(idx + 1, student[0], student[1]) for idx, student in enumerate(students)]
 
 
-#print the students names and the time of the arrive for them
-print(tabulate(table_data, headers=["No.", "Student Name", "Time"], tablefmt="grid"))
+print(tabulate(table_data, headers=["No.", "Student Name", datetime.datetime.now().strftime("%Y-%m-%d")], tablefmt="grid"))
 
-#save attendance data to a CSV file
 with open("attendance.csv", "w", newline="") as file:
     writer = csv.writer(file)
-    writer.writerow(["No.", "Student Name", "Time"])
+    writer.writerow(["No.", "Student Name", datetime.datetime.now().strftime("%Y-%m-%d")])
     writer.writerows(table_data)
-
-#close camera and windows
-video.release()
-cv2.destroyAllWindows()
