@@ -13,11 +13,9 @@ class SimpleFacerec:
             print(f"Error: The path '{images_path}' does not exist.")
             return
 
-        # Traverse all subdirectories in the images_path
         for person_name in os.listdir(images_path):
             person_path = os.path.join(images_path, person_name)
             
-            # Skip files, focus on folders only
             if not os.path.isdir(person_path):
                 print(f"Skipping non-folder item: {person_name}")
                 continue
@@ -27,12 +25,10 @@ class SimpleFacerec:
             for img_name in os.listdir(person_path):
                 img_path = os.path.join(person_path, img_name)
 
-                # Skip non-image files
                 if not (img_name.endswith('.jpg') or img_name.endswith('.png') or img_name.endswith('.jpeg')):
                     print(f"Skipping non-image file: {img_name}")
                     continue
 
-                # Read the image
                 img = cv2.imread(img_path)
                 if img is None:
                     print(f"Warning: Unable to read image file: {img_name}")
@@ -41,12 +37,10 @@ class SimpleFacerec:
                 try:
                     rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-                    # Encode the face
                     face_encodings = face_recognition.face_encodings(rgb_img)
                     if face_encodings:
                         img_encoding = face_encodings[0]
 
-                        # Append encoding and folder name as the person's name
                         self.known_face_encodings.append(img_encoding)
                         self.known_face_names.append(person_name)
                     else:
@@ -62,13 +56,10 @@ class SimpleFacerec:
                 print("The frame is not a valid image.")
                 return [], []
 
-            # Convert the captured frame to RGB (for face_recognition)
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            # Detect face locations in the frame
             face_locations = face_recognition.face_locations(rgb_frame)
 
-            # Get face encodings for each detected face
             face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
 
             face_names = []
@@ -76,7 +67,6 @@ class SimpleFacerec:
                 matches = face_recognition.compare_faces(self.known_face_encodings, face_encoding)
                 name = "Unknown"
 
-                # Find the closest match
                 face_distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
                 best_match_index = np.argmin(face_distances)
                 if matches[best_match_index]:
